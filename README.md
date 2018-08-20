@@ -44,3 +44,11 @@ function table_to_string(tbl)
     return result.."}"
 end
 ```
+
+## CLI Commands
+
+Count lines:
+
+```CLI
+find . -name '*.php' | xargs wc -l
+```
