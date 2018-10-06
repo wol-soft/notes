@@ -52,3 +52,9 @@ Count lines:
 ```CLI
 find . -name '*.php' | xargs wc -l
 ```
+
+Renew certificate with certbot:
+
+```CLI
+sudo certbot run -a webroot -i apache -w /dir/to/htdocs/
+```
