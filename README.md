@@ -47,6 +47,12 @@ end
 
 ## CLI Commands
 
+Strace Apache:
+
+```CLI
+ps auxw | grep sbin/apache | awk '{print"-p " $2}' | xargs strace
+```
+
 Count lines:
 
 ```CLI
