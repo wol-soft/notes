@@ -64,3 +64,11 @@ Renew certificate with certbot:
 ```CLI
 sudo certbot run -a webroot -i apache -w /dir/to/htdocs/
 ```
+
+#### Git commands
+
+Delete all local branches except the currently active branch:
+
+```CLI
+git branch | grep -v "*" | xargs git branch -D
+```
