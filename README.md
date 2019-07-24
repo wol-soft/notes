@@ -72,6 +72,14 @@ atop
 apachetop
 iotop --only
 ```
+
+DISK
+
+```CLI
+df -h
+lsblk
+discus
+```
 #### Git commands
 
 Delete all local branches except the currently active branch:
