@@ -65,6 +65,13 @@ Renew certificate with certbot:
 sudo certbot run -a webroot -i apache -w /dir/to/htdocs/
 ```
 
+TOP
+
+```CLI
+atop
+apachetop
+iotop --only
+```
 #### Git commands
 
 Delete all local branches except the currently active branch:
