@@ -65,6 +65,12 @@ Renew certificate with certbot:
 sudo certbot run -a webroot -i apache -w /dir/to/htdocs/
 ```
 
+Database cloning via CRON:
+
+```CLI
+mysqldump -uUSER_PRIMARY_READONLY -pPASSWORD_PRIMARY DB_PRIMARY > dump.sql && sed -i '/DEFINER=/d' dump.sql && mysql -uUSER_COPY -pPASSWORD_COPY DB_COPY < dump.sql && rm dump.sql
+```
+
 TOP
 
 ```CLI
@@ -80,6 +86,13 @@ df -h
 lsblk
 discus
 ```
+
+Port Bindings
+
+```CLI
+lsof -Pnl +M -i4
+```
+
 #### Git commands
 
 Delete all local branches except the currently active branch:
