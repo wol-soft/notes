@@ -87,6 +87,12 @@ lsblk
 discus
 ```
 
+NETWORK
+
+```CLI
+speedtest-cli
+```
+
 Port Bindings
 
 ```CLI
