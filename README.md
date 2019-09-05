@@ -40,7 +40,7 @@ for ext in js php json yml twig svg scss html; do echo "$(printf '%-10s' "$ext")
 Renew certificate with certbot:
 
 ```CLI
-sudo certbot run -a webroot -i apache -w /dir/to/htdocs/
+sudo certbot run -a webroot -i apache -w /dir/to/htdocs/ -d www.my-domain.de
 ```
 
 ---
