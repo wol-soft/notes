@@ -97,7 +97,7 @@ git branch | grep -v "*" | xargs git branch -D
 
 Rewrite the git history to not contain a file/folder:
 
-````CLI
+```CLI
 git filter-branch --tree-filter "rm -rf myFile.txt" --prune-empty HEAD
 git for-each-ref --format="%(refname)" refs/original/ | xargs -n 1 git update-ref -d
 git gc
