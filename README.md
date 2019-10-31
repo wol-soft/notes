@@ -95,6 +95,15 @@ Delete all local branches except the currently active branch:
 git branch | grep -v "*" | xargs git branch -D
 ```
 
+Rewrite the git history to not contain a file/folder:
+
+````CLI
+git filter-branch --tree-filter "rm -rf myFile.txt" --prune-empty HEAD
+git for-each-ref --format="%(refname)" refs/original/ | xargs -n 1 git update-ref -d
+git gc
+git push origin master --force
+```
+
 ## Loadimpact
 
 Log something from within a string longer than 1024 bytes:
