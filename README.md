@@ -4,7 +4,7 @@
 
 Tail with new lines:
 
-````CLI
+```CLI
 tail -f myFile | sed 's/\\n/\n/g'
 ```
 
