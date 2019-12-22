@@ -2,6 +2,12 @@
 
 ## CLI Commands
 
+Tail with new lines:
+
+````CLI
+tail -f myFile | sed 's/\\n/\n/g'
+```
+
 Strace Apache:
 
 ```CLI
