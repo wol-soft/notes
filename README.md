@@ -51,6 +51,21 @@ sudo certbot run -a webroot -i apache -w /dir/to/htdocs/ -d www.my-domain.de
 
 ---
 
+Update MediaWiki:
+
+```CLI
+Backup DB
+Backup Directory
+
+git fetch -p
+git branch -a | grep REL
+git checkout REL1_35
+git submodule update --init
+cd extensions/VisualEditor && git submodule update --init
+```
+
+---
+
 Database cloning via CRON:
 
 ```CLI
