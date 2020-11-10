@@ -66,6 +66,38 @@ cd extensions/VisualEditor && git submodule update --init
 
 ---
 
+XHProf Setup:
+
+```CLI
+# Tideways extension installieren
+git clone "https://github.com/tideways/php-xhprof-extension.git"
+cd php-xhprof-extension
+phpize
+./configure
+make
+make install
+
+# UI installieren
+https://github.com/preinheimer/xhprof
+```
+
+---
+
+PHP SRC Dev:
+
+```CLI
+sudo apt install -y build-essential autoconf bison re2c libxml2-dev libsqlite3-dev
+./buildconf
+./configure --enable-debug
+make -j4
+
+# Executable @ sapi/cli/php
+
+make test
+```
+
+---
+
 Database cloning via CRON:
 
 ```CLI
