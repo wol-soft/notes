@@ -1,0 +1,30 @@
+diff --git a/node_modules/chart.js/dist/chart.js b/node_modules/chart.js/dist/chart.js
+--- a/node_modules/chart.js/dist/chart.js
++++ b/node_modules/chart.js/dist/chart.js
+@@ -7908,7 +7908,10 @@ function _buildStackLine(source) {
+     points.push(...postponed);
+ }
+  function findPoint(line, sourcePoint, property) {
+-    const point = line.interpolate(sourcePoint, property);
++    let point = line.interpolate(sourcePoint, property);
++    if (Array.isArray(point)) {
++        point = point[0];
++    }
+     if (!point) {
+         return {};
+     }
+diff --git a/node_modules/chart.js/dist/chart.cjs b/node_modules/chart.js/dist/chart.cjs
+--- a/node_modules/chart.js/dist/chart.cjs
++++ b/node_modules/chart.js/dist/chart.cjs
+@@ -7910,7 +7910,10 @@ function _buildStackLine(source) {
+     points.push(...postponed);
+ }
+  function findPoint(line, sourcePoint, property) {
+-    const point = line.interpolate(sourcePoint, property);
++    let point = line.interpolate(sourcePoint, property);
++    if (Array.isArray(point)) {
++        point = point[0];
++    }
+     if (!point) {
+         return {};
+     }

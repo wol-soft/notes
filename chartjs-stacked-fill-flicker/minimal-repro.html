@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Chart.js fill:'stack' band drop repro</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+<style>
+  body { font-family: sans-serif; margin: 0; padding: 16px; }
+  #wrap { height: 420px; position: relative; }
+  #log { white-space: pre-wrap; font: 11px monospace; max-height: 240px; overflow-y: auto; background: #f4f4f4; padding: 8px; margin-top: 12px; }
+  button { font-size: 14px; padding: 6px 12px; margin-right: 8px; }
+</style>
+</head>
+<body>
+<p>
+  Two datasets, <code>fill: 'stack'</code>, stacked y axis, Chart.js 4.5.1.
+  <b>Toggle representation</b> triggers an animated update whose y-axis tick labels change width, so every point's
+  <code>x</code> animates a few pixels. Near the end of that animation the orange band (dataset 1) disappears for
+  a few frames. The log below reports every frame where it has 0 pixels in the sampled column.
+  <b>Deterministic</b> buttons do the same without any animation: they nudge one point's <code>x</code> by 1e-9 px
+  (or by 1e-3 px for contrast) and redraw.
+</p>
+<button id="toggle">Toggle representation (animated)</button>
+<button id="nudgeTiny">Deterministic: nudge one x by 1e-9 px</button>
+<button id="nudgeBig">Control: nudge one x by 1e-3 px</button>
+<label><input id="workaround" type="checkbox"> workaround: <code>fill: 'origin'</code> / <code>'-1'</code> instead of <code>'stack'</code> (applies on next toggle)</label>
+<div id="wrap"><canvas id="canvas"></canvas></div>
+<div id="log"></div>
+<script>
+const log = (m) => { const el = document.getElementById('log'); el.textContent += `[${performance.now().toFixed(0)}ms] ${m}\n`; el.scrollTop = el.scrollHeight; };
+
+const N = 330; // enough points that chart.update() spans several ms (see mechanism)
+const counts = [0, 1].map((k) => Array.from({ length: N }, (_, w) =>
+  Math.max(0, Math.round((40 - k * 3) * (1 + 0.7 * Math.sin((w + k * 7) / 11) + 0.3 * Math.sin((w + k * 3) / 3.1))))));
+const labels = Array.from({ length: N }, (_, i) => 'w' + i);
+const COLORS = ['#4dabf7', '#ffa94d'];
+
+function buildDatasets(isRelative) {
+  return counts.map((c, k) => ({
+    label: 'Series ' + k,
+    data: c.map((v, i) => isRelative ? (v / (counts[0][i] + counts[1][i] || 1)) * 100 : v * 100),
+    backgroundColor: COLORS[k] + 'a6',
+    borderColor: COLORS[k],
+    borderWidth: 0,
+    pointRadius: 0,
+    fill: document.getElementById('workaround').checked ? (k === 0 ? 'origin' : '-1') : 'stack',
+    stack: 'a',
+  }));
+}
+// The tick labels ("100%" vs "16,000") have different widths, so the chart area's left edge moves on every
+// toggle and every point's x animates. That x animation is the trigger, not the change in values.
+const buildScales = (isRelative) => ({
+  y: { stacked: true, beginAtZero: true, ...(isRelative ? { max: 100, ticks: { callback: (v) => v + '%' } } : {}) },
+});
+
+// Identity-preserving dataset update, verbatim from vue-chartjs 5.3.4 (setDatasets). Replacing
+// chart.data.datasets with fresh objects instead would lose the animated transition (and the bug).
+function setDatasets(currentData, nextDatasets, datasetIdKey) {
+  const addedDatasets = [];
+  currentData.datasets = nextDatasets.map((nextDataset) => {
+    const currentDataset = currentData.datasets.find((dataset) => dataset[datasetIdKey] === nextDataset[datasetIdKey]);
+    if (!currentDataset || !nextDataset.data || addedDatasets.includes(currentDataset)) {
+      return { ...nextDataset };
+    }
+    addedDatasets.push(currentDataset);
+    Object.assign(currentDataset, nextDataset);
+    return currentDataset;
+  });
+}
+
+// Per-frame detector: count dataset-1-coloured pixels in the middle column after every draw.
+const bandProbe = {
+  id: 'bandProbe',
+  afterDraw(chart) {
+    const a = chart.chartArea, r = chart.currentDevicePixelRatio;
+    const x = Math.round(((a.left + a.right) / 2) * r);
+    const px = chart.ctx.getImageData(x, Math.round(a.top * r), 1, Math.round((a.bottom - a.top) * r)).data;
+    let n = 0;
+    for (let p = 0; p < px.length; p += 4) if (px[p + 3] > 20 && Math.abs(px[p] - 0xff) + Math.abs(px[p + 1] - 0xa9) + Math.abs(px[p + 2] - 0x4d) < 40) n++;
+    if (!chart.$armed) return; // ignore the initial grow-from-zero animation
+    if (n === 0) log('frame: Series 1 band MISSING (0 px in sampled column)');
+    else if (chart.$bandWasMissing) log(`frame: Series 1 band back (${n} px)`);
+    chart.$bandWasMissing = n === 0;
+  },
+};
+
+let isRelative = true;
+const chart = new Chart(document.getElementById('canvas'), {
+  type: 'line',
+  data: { labels, datasets: buildDatasets(isRelative) },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 1000, onComplete: () => log('animation onComplete') },
+    scales: buildScales(isRelative),
+  },
+  plugins: [bandProbe],
+});
+
+document.getElementById('toggle').onclick = () => {
+  isRelative = !isRelative;
+  chart.$armed = true;
+  const left0 = chart.chartArea.left;
+  setDatasets(chart.data, buildDatasets(isRelative), 'label');
+  Object.assign(chart.options, { scales: buildScales(isRelative) });
+  chart.update();
+  log(`--- toggled to ${isRelative ? 'relative (%)' : 'absolute counts'}; chartArea.left ${left0.toFixed(1)} -> ${chart.chartArea.left.toFixed(1)} ---`);
+};
+
+function nudge(dx) {
+  chart.$armed = true;
+  const p = chart.getDatasetMeta(1).data[100];
+  const x0 = p.x;
+  p.x = x0 + dx;
+  log(`--- nudge Series 1 point #100 x by ${dx} px and redraw ---`);
+  chart.draw();
+  p.x = x0; // restore on the next draw
+  setTimeout(() => { log('--- restored, redraw ---'); chart.draw(); }, 500);
+}
+document.getElementById('nudgeTiny').onclick = () => nudge(1e-9);
+document.getElementById('nudgeBig').onclick = () => nudge(1e-3);
+</script>
+</body>
+</html>
