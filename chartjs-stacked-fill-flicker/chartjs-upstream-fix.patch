@@ -1,0 +1,77 @@
+diff --git a/src/plugins/plugin.filler/filler.target.stack.js b/src/plugins/plugin.filler/filler.target.stack.js
+index 8c6d053..62ef8eb 100644
+--- a/src/plugins/plugin.filler/filler.target.stack.js
++++ b/src/plugins/plugin.filler/filler.target.stack.js
+@@ -5,7 +5,7 @@
+  */
+ 
+ import {LineElement} from '../../elements/index.js';
+-import {_isBetween} from '../../helpers/index.js';
++import {_isBetween, isArray} from '../../helpers/index.js';
+ import {_createBoundaryLine} from './filler.helper.js';
+ 
+ /**
+@@ -85,7 +85,13 @@ function addPointsBelow(points, sourcePoint, linesBelow) {
+  * @returns {{point?: PointElement, first?: boolean, last?: boolean}}
+  */
+ function findPoint(line, sourcePoint, property) {
+-  const point = line.interpolate(sourcePoint, property);
++  // interpolate() returns one point per matching segment (typed `undefined | Point | Point[]`).
++  // A value within the _isBetween epsilon of a vertex (but not equal to it) matches both
++  // adjacent segments, so it returns (practically) the same point twice.
++  let point = /** @type {PointElement|PointElement[]|undefined} */ (line.interpolate(sourcePoint, property));
++  if (isArray(point)) {
++    point = point[0];
++  }
+   if (!point) {
+     return {};
+   }
+diff --git a/test/specs/plugin.filler.tests.js b/test/specs/plugin.filler.tests.js
+index a01f2ff..7459300 100644
+--- a/test/specs/plugin.filler.tests.js
++++ b/test/specs/plugin.filler.tests.js
+@@ -296,4 +296,44 @@ describe('Plugin.filler', function() {
+       ]);
+     });
+   });
++
++  describe('dataset.fill: stack', function() {
++    // An x that is within the _isBetween epsilon of a vertex of the line below, but not equal to it,
++    // makes LineElement.interpolate() return one point per adjacent segment (an array). Animations
++    // produce such x values near their end when datasets' x-animations started a few ms apart.
++    [1e-9, -1e-9].forEach(function(delta) {
++      it('should fill when a point x differs from the line below by ' + delta + 'px', function() {
++        var chart = window.acquireChart({
++          type: 'line',
++          data: {
++            labels: ['a', 'b', 'c', 'd', 'e'],
++            datasets: [
++              {data: [1, 2, 1, 2, 1], fill: 'stack', backgroundColor: '#0000ff'},
++              {data: [1, 1, 1, 1, 1], fill: 'stack', backgroundColor: '#ff0000'}
++            ]
++          },
++          options: {
++            animation: false,
++            elements: {
++              line: {borderWidth: 0},
++              point: {radius: 0}
++            },
++            scales: {
++              x: {display: false},
++              y: {display: false, stacked: true}
++            }
++          }
++        });
++
++        var point = chart.getDatasetMeta(1).data[2];
++        point.x += delta;
++        chart.draw();
++
++        // middle of the second dataset's band (stacked from 1 to 2) at label 'c'
++        var x = Math.round(point.x);
++        var y = Math.round(chart.scales.y.getPixelForValue(1.5));
++        expect(Array.from(chart.ctx.getImageData(x, y, 1, 1).data)).toEqual([255, 0, 0, 255]);
++      });
++    });
++  });
+ });

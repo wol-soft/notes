@@ -82,15 +82,20 @@ they don't go through `findPoint`.
 
 ### Possible solution
 
-Minimal fix in `findPoint`. The matched points are the same point within the epsilon, so taking the first is safe:
+Minimal fix in `findPoint`. The matched points are the same point within the epsilon, so taking the first is
+safe. The complete patch, with a regression test, is `chartjs-upstream-fix.patch` (apply with `git apply`):
 
 ```diff
+-import {_isBetween} from '../../helpers/index.js';
++import {_isBetween, isArray} from '../../helpers/index.js';
+ ...
  function findPoint(line, sourcePoint, property) {
 -  const point = line.interpolate(sourcePoint, property);
-+  let point = line.interpolate(sourcePoint, property);
++  // interpolate() returns one point per matching segment (typed `undefined | Point | Point[]`).
++  // A value within the _isBetween epsilon of a vertex (but not equal to it) matches both
++  // adjacent segments, so it returns (practically) the same point twice.
++  let point = /** @type {PointElement|PointElement[]|undefined} */ (line.interpolate(sourcePoint, property));
 +  if (isArray(point)) {
-+    // interpolate() returns one point per matching segment; a value within the
-+    // _isBetween epsilon of (but not equal to) a vertex matches both adjacent segments
 +    point = point[0];
 +  }
    if (!point) {
@@ -98,17 +103,30 @@ Minimal fix in `findPoint`. The matched points are the same point within the eps
    }
 ```
 
-(Plus `isArray` added to the existing `import {_isBetween} from '../../helpers/index.js'`.) Verified against 4.5.1: with this change the animated repro shows 0
-frames with a missing band, and the 1e-9 nudge no longer removes the fill.
+The JSDoc cast is needed because `LineElement.interpolate`'s JSDoc says `@returns {PointElement|undefined}`,
+while the public typing in `src/types/index.d.ts` already says `undefined | Point | Point[]`. Correcting the JSDoc
+instead would also flag `interpolatedLineTo` in `filler.drawing.js`. That function has the same array blind spot,
+and it is harmless today only because `ctx.lineTo(undefined, undefined)` is a no-op.
+
+**Regression test** (added to `test/specs/plugin.filler.tests.js`). It uses the deterministic sample above for
+`delta` = `1e-9` and `-1e-9`: render with `fill: 'stack'`, shift `getDatasetMeta(1).data[2].x` by `delta`, call
+`chart.draw()`, and assert that the pixel in the middle of dataset 1's band is painted (`[255, 0, 0, 255]`).
+
+| | v4.5.1 | master (6a86e23) |
+|---|---|---|
+| New test, without the fix | 2 FAILED (pixel is `[0, 0, 0, 0]`), 75 passed | 2 FAILED, 76 passed |
+| New test + fix | 77/77 passed | 78/78 passed |
+| Full suite + fix | 1686/1686 passed | not run |
+
+Control: with `delta` = `0` or `1e-3` the same assertion passes without the fix, so the test detects exactly the
+sub-epsilon case. Also clean with the patch applied: `eslint` on the changed files and `tsc -p tsconfig.json`
+(checkJs). Run with Karma in headless Chromium 141 (`--browsers ChromeHeadless`); not run in Firefox.
+
+With the fix applied to the 4.5.1 build, the animated repro also shows 0 frames with a missing band.
 
 A more thorough fix would make `_boundSegment` use the same tolerance for its start/stop decisions as for
 `inside`, so that a single-value bound never yields two overlapping sub-segments. That touches shared segment
-code, though. `interpolatedLineTo` in `filler.drawing.js` has the same array blind spot. It is harmless today
-only because `ctx.lineTo(undefined, undefined)` is a no-op.
-
-A suggested regression test: the deterministic sample above. Render with `fill: 'stack'`, set
-`getDatasetMeta(1).data[2].x += 1e-9`, call `chart.draw()`, and assert that a pixel inside dataset 1's band is
-still painted.
+code, though.
 
 ### Context
 

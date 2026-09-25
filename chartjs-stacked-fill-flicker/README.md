@@ -165,8 +165,12 @@ glitch), which is different. `findPoint` on `master` is unchanged from 4.5.1. Th
 - `minimal-repro.html`: 2 datasets, stock Chart.js 4.5.1 from the CDN, the vue-chartjs `setDatasets` update
   verbatim, a per-frame "band missing" log, a deterministic 1e-9 px nudge button (reproduces with no
   animation at all), and a checkbox to A/B the `'origin'`/`'-1'` workaround.
-- `upstream-issue.md`: bug report draft for chartjs/Chart.js, including the proposed source fix and a test.
-- `chart.js+4.5.1.patch`: patch-package patch for the `findPoint` fix.
+- `upstream-issue.md`: bug report draft for chartjs/Chart.js, including the proposed source fix and test results.
+- `chartjs-upstream-fix.patch`: fix plus regression test against the Chart.js source tree (`src/` + `test/specs/`).
+  Applies with `git apply` to v4.5.1 and to `master`. The new test fails without the fix and passes with it on
+  both, and the full v4.5.1 suite (1686 specs) passes.
+- `chart.js+4.5.1.patch`: patch-package patch for the `findPoint` fix in an app's `node_modules` (no tests; those
+  live in the upstream patch).
 
 ## How this was verified
 
