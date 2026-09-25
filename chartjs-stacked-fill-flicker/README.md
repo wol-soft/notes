@@ -165,6 +165,11 @@ glitch), which is different. `findPoint` on `master` is unchanged from 4.5.1. Th
 - `minimal-repro.html`: 2 datasets, stock Chart.js 4.5.1 from the CDN, the vue-chartjs `setDatasets` update
   verbatim, a per-frame "band missing" log, a deterministic 1e-9 px nudge button (reproduces with no
   animation at all), and a checkbox to A/B the `'origin'`/`'-1'` workaround.
+- `jsfiddle/`: the original demo simplified for JSFiddle. It has 9 example datasets and only the
+  Relative/Absolute toggle, keeps the vue-chartjs update path, and is all in English. `fiddle.html`, `fiddle.css`
+  and `fiddle.js` are the three panes. Open `open-in-jsfiddle.html` in a browser and click the button to get a
+  prefilled fiddle, then press Save there. After editing a pane, run `build-launcher.py` to regenerate the
+  launcher.
 - `upstream-issue.md`: bug report draft for chartjs/Chart.js, including the proposed source fix and test results.
 - `chartjs-upstream-fix.patch`: fix plus regression test against the Chart.js source tree (`src/` + `test/specs/`).
   Applies with `git apply` to v4.5.1 and to `master`. The new test fails without the fix and passes with it on

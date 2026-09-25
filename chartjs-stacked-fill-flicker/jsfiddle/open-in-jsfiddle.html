@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Open in JSFiddle</title>
+<style>
+  body { font-family: sans-serif; margin: 16px; max-width: 960px; }
+  textarea { width: 100%; font: 12px monospace; box-sizing: border-box; }
+  button { font-size: 16px; padding: 8px 16px; }
+</style>
+</head>
+<body>
+<h1>Chart.js fill: 'stack' band drop demo</h1>
+<p>
+  Click the button to open this demo as a new fiddle on JSFiddle, then press <b>Save</b> there to get a
+  shareable link. You can also copy the three panes below into a fiddle by hand.
+</p>
+<form method="post" action="https://jsfiddle.net/api/post/library/pure/" target="_blank">
+  <input type="hidden" name="title" value="Chart.js 4.5.1: fill 'stack' bands disappear at the end of an animation">
+  <input type="hidden" name="description" value="Stacked area chart (fill: 'stack'). Toggling the representation animates the chart; right when the animation ends, all bands except the first one disappear and come back one by one.">
+  <input type="hidden" name="wrap" value="b">
+  <p><button type="submit">Open in JSFiddle</button></p>
+  <h2>HTML</h2>
+  <textarea name="html" rows="16" readonly>&lt;script src=&quot;https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js&quot;&gt;&lt;/script&gt;
+
+&lt;label&gt;
+  Representation
+  &lt;select id=&quot;representation&quot;&gt;
+    &lt;option value=&quot;relative&quot; selected&gt;Relative (%)&lt;/option&gt;
+    &lt;option value=&quot;absolute&quot;&gt;Absolute&lt;/option&gt;
+  &lt;/select&gt;
+&lt;/label&gt;
+&lt;p&gt;
+  Switch the representation and watch the moment the animation ends: all bands except the first one
+  disappear, then come back one by one.
+&lt;/p&gt;
+&lt;div class=&quot;chart-wrap&quot;&gt;&lt;canvas id=&quot;chart&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+</textarea>
+  <h2>CSS</h2>
+  <textarea name="css" rows="5" readonly>body { font-family: sans-serif; margin: 16px; }
+select { font-size: 14px; margin-left: 4px; }
+.chart-wrap { position: relative; height: 480px; }
+</textarea>
+  <h2>JavaScript</h2>
+  <textarea name="js" rows="40" readonly>// Chart.js 4.5.1 stacked area chart (fill: &#x27;stack&#x27;).
+// Switching the representation animates the chart. Right when the animation ends,
+// every band above the first one disappears and they come back one by one.
+
+const WEEKS = 330;
+const COLORS = [&#x27;#4dabf7&#x27;, &#x27;#ffa94d&#x27;, &#x27;#69db7c&#x27;, &#x27;#e64980&#x27;, &#x27;#9775fa&#x27;, &#x27;#22b8cf&#x27;, &#x27;#fcc419&#x27;, &#x27;#ff6b6b&#x27;];
+
+// Example data: weekly play counts for 8 artists plus an &quot;Other&quot; bucket
+const labels = [];
+for (let w = 0; w &lt; WEEKS; w++) {
+  labels.push(new Date(Date.UTC(2020, 1, 1) + w * 7 * 86400000).toISOString().slice(0, 10));
+}
+
+const series = COLORS.map((color, i) =&gt; ({
+  name: &#x27;Artist &#x27; + (i + 1),
+  color,
+  counts: labels.map((_, w) =&gt; Math.max(0, Math.round(
+    (40 - i * 3) * (1 + 0.7 * Math.sin((w + i * 7) / 11) + 0.3 * Math.sin((w + i * 3) / 3.1))))),
+}));
+series.push({
+  name: &#x27;Other&#x27;,
+  color: &#x27;#868e96&#x27;,
+  counts: labels.map((_, w) =&gt; Math.max(0, Math.round(30 + 25 * Math.sin(w / 5) + 15 * Math.sin(w / 17)))),
+});
+
+const weeklyTotals = labels.map((_, w) =&gt; series.reduce((sum, s) =&gt; sum + s.counts[w], 0));
+
+function buildDatasets(relative) {
+  return series.map((s) =&gt; ({
+    label: s.name,
+    data: s.counts.map((count, w) =&gt; relative ? count / weeklyTotals[w] * 100 : count),
+    backgroundColor: s.color + &#x27;a6&#x27;,
+    borderColor: s.color,
+    borderWidth: 0,
+    pointRadius: 0,
+    fill: &#x27;stack&#x27;,
+    stack: &#x27;artists&#x27;,
+  }));
+}
+
+function buildScales(relative) {
+  return {
+    x: { ticks: { maxTicksLimit: 12 } },
+    y: {
+      stacked: true,
+      beginAtZero: true,
+      ...(relative ? { max: 100, ticks: { callback: (value) =&gt; value + &#x27;%&#x27; } } : { ticks: { precision: 0 } }),
+    },
+  };
+}
+
+// The update path vue-chartjs uses (setDatasets from vue-chartjs 5.3.4): every incoming dataset is
+// merged into the existing dataset object with the same label, so Chart.js animates from the current
+// state. Replacing chart.data.datasets with new objects would skip the animation, and the bug with it.
+function setDatasets(currentData, nextDatasets, datasetIdKey) {
+  const addedDatasets = [];
+  currentData.datasets = nextDatasets.map((nextDataset) =&gt; {
+    const currentDataset = currentData.datasets.find((dataset) =&gt; dataset[datasetIdKey] === nextDataset[datasetIdKey]);
+    if (!currentDataset || !nextDataset.data || addedDatasets.includes(currentDataset)) {
+      return { ...nextDataset };
+    }
+    addedDatasets.push(currentDataset);
+    Object.assign(currentDataset, nextDataset);
+    return currentDataset;
+  });
+}
+
+const chart = new Chart(document.getElementById(&#x27;chart&#x27;), {
+  type: &#x27;line&#x27;,
+  data: { labels, datasets: buildDatasets(true) },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 1000 },
+    plugins: { legend: { position: &#x27;bottom&#x27; } },
+    scales: buildScales(true),
+  },
+});
+
+document.getElementById(&#x27;representation&#x27;).addEventListener(&#x27;change&#x27;, (event) =&gt; {
+  const relative = event.target.value === &#x27;relative&#x27;;
+  setDatasets(chart.data, buildDatasets(relative), &#x27;label&#x27;);
+  Object.assign(chart.options, { scales: buildScales(relative) });
+  chart.update();
+});
+</textarea>
+</form>
+</body>
+</html>
